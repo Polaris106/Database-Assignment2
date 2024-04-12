@@ -20,7 +20,7 @@ restaurant_counts = input_df.groupBy("City", "Cuisine Style").agg(
 
 # Write the output to CSV files in HDFS
 restaurant_counts.write.csv(
-    "hdfs://" + hdfs_nn + "/assignment2/output/question4/restaurant_counts", header=True)
+    "hdfs://" + hdfs_nn + "/assignment2/output/question4/", header=True)
 
 # Stop the SparkSession
 spark.stop()

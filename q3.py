@@ -31,7 +31,7 @@ combined_cities = top_cities.withColumn("Type", lit("Top")).union(
 
 # Write the combined results to a CSV file in HDFS
 combined_cities.write.csv(
-    "hdfs://" + hdfs_nn + "/assignment2/output/question3/combined_cities", header=True)
+    "hdfs://" + hdfs_nn + "/assignment2/output/question3/", header=True)
 
 # Stop the SparkSession
 spark.stop()
