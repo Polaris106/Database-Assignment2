@@ -2,25 +2,23 @@ import sys
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import count
 
-# you may add more import if you need to
-
-
-# don't change this line
+# Don't change this line
 hdfs_nn = sys.argv[1]
 
+# Initialize SparkSession
 spark = SparkSession.builder.appName("Assigment 2 Question 4").getOrCreate()
-# YOUR CODE GOES BELOW
-# Load the input CSV file into a DataFrame
-input_df = spark.read.csv(
-    "hdfs://" + hdfs_nn + "/assignment2/part1/input/TA_restaurants_curated_cleaned.csv", header=True, inferSchema=True)
 
-# Count the number of restaurants by city and cuisine style
-restaurant_counts = input_df.groupBy("City", "Cuisine Style").agg(
-    count("*").alias("Restaurant Count"))
+# Load data from HDFS
+df = spark.read.option("header", True)\
+    .option("inferSchema", True)\
+    .option("delimiter", ",")\
+    .option("quotes", '"')\
+    .csv("hdfs://%s:9000/assignment2/part1/input/" % hdfs_nn)
 
-# Write the output to CSV files in HDFS
-restaurant_counts.write.csv(
-    "hdfs://" + hdfs_nn + "/assignment2/output/question4/", header=True)
+# Group by city and cuisine style, count the number of restaurants
+result_df = df.groupBy("City", "Cuisine Style")\
+              .agg(count("*").alias("Count"))
 
-# Stop the SparkSession
-spark.stop()
+# Write the output as CSV files into the specified HDFS path
+result_df.write.csv(
+    "hdfs://%s:9000/assignment2/output/question4/" % hdfs_nn, header=True)
