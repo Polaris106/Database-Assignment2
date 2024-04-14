@@ -20,17 +20,17 @@ json_schema = "array<struct<cast_id:int, character:string, credit_id:string, gen
 df = df.withColumn("cast", explode(from_json(df["cast"], json_schema)))
 
 # Explode the cast array to get individual actors/actresses
-actor_pairs_df = df.select("id", "title", "cast.name").alias("actor1") \
+actor_pairs_df = df.select("movie_id", "title", "cast.name").alias("actor1") \
                    .join(
-                       df.select("id", "cast.name").alias("actor2"),
-                       col("actor1.id") == col("actor2.id")
+                       df.select("movie_id", "cast.name").alias("actor2"),
+                       col("actor1.movie_id") == col("actor2.movie_id")
 ) \
     .filter(col("actor1.name") < col("actor2.name")) \
-    .select("id", "title", col("actor1.name").alias("actor1"), col("actor2.name").alias("actor2"))
+    .select("movie_id", "title", col("actor1.name").alias("actor1"), col("actor2.name").alias("actor2"))
 
 # Group by actor pairs and count the number of movies they co-cast in
 co_cast_df = actor_pairs_df.groupBy("actor1", "actor2").agg(
-    collect_list("id").alias("movie_ids")
+    collect_list("movie_id").alias("movie_ids")
 ).filter(size("movie_ids") >= 2)
 
 # Explode the list of movie IDs and select required columns
