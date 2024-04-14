@@ -1,6 +1,6 @@
 import sys
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import col, collect_list, size
+from pyspark.sql.functions import col, collect_list, size, explode
 from itertools import combinations
 
 # Don't change this line
@@ -17,14 +17,15 @@ output_path = "hdfs://{}:9000/assignment2/part2/input/tmdb_5000_credits.parquet"
 df = spark.read.option("header", "true").parquet(input_path)
 
 # Extract pairs of actors/actresses for each movie
-actor_pairs_df = df.select("movie_id", "title", "cast").explode("cast").alias("actor").join(
-    df.select("movie_id", "cast").explode("cast").alias("other_actor"),
-    col("actor.cast") < col("other_actor.cast")
+actor_pairs_df = df.select("movie_id", "title", explode("cast").alias("actor")).alias("actor").join(
+    df.select("movie_id", explode("cast").alias("actor")).alias("other_actor"),
+    (col("actor.movie_id") == col("other_actor.movie_id")) & (
+        col("actor.actor") < col("other_actor.actor"))
 ).select(
     "movie_id",
     "title",
-    col("actor.cast").alias("actor1"),
-    col("other_actor.cast").alias("actor2")
+    col("actor.actor").alias("actor1"),
+    col("other_actor.actor").alias("actor2")
 )
 
 # Group by actor pairs and count the number of movies they co-cast in
