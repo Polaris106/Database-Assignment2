@@ -1,6 +1,6 @@
 import sys
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import col, collect_list, size, explode
+from pyspark.sql.functions import col, collect_list, size, explode, split
 from itertools import combinations
 
 # Don't change this line
@@ -17,8 +17,9 @@ output_path = "hdfs://{}:9000/assignment2/output/question5".format(
 df = spark.read.option("header", "true").parquet(input_path)
 
 # Extract pairs of actors/actresses for each movie
-actor_pairs_df = df.select("movie_id", "title", explode("cast").alias("actor")).alias("actor").join(
-    df.select("movie_id", explode("cast").alias("actor")).alias("other_actor"),
+actor_pairs_df = df.select("movie_id", "title", explode(split("cast", ",")).alias("actor")).alias("actor").join(
+    df.select("movie_id", explode(split("cast", ",")
+                                  ).alias("actor")).alias("other_actor"),
     (col("actor.movie_id") == col("other_actor.movie_id")) & (
         col("actor.actor") < col("other_actor.actor"))
 ).select(
