@@ -18,7 +18,7 @@ df = spark.read.parquet(input_path)
 
 # Extract actor/actress pairs for each movie
 actor_pairs_df = df.select(
-    col("id").alias("movie_id"),
+    col("movie_id"),
     col("title"),
     explode(split(col("cast"), ",\s*")).alias("actor1")
 ).join(
