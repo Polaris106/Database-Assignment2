@@ -16,29 +16,23 @@ output_path = "hdfs://{}:9000/assignment2/output/question5".format(
 
 df = spark.read.parquet(input_path)
 
-# Extract actor/actress pairs for each movie
-actor_pairs_df = df.select(
-    col("movie_id"),
-    col("title"),
-    explode(split(col("cast"), ",\s*")).alias("actor1")
-).join(
-    df.select(
-        col("id").alias("movie_id"),
-        explode(split(col("cast"), ",\s*")).alias("actor2")
-    ),
-    "movie_id"
-).filter(
-    col("actor1") < col("actor2")
-).select(
-    "movie_id",
-    "title",
-    col("actor1").alias("actor1"),
-    col("actor2").alias("actor2")
-)
+# Define JSON schema for the cast field
+json_schema = "array<struct<cast_id:int, character:string, credit_id:string, gender:int, id:int, name:string, order:int>>"
+
+# Explode the cast array to get individual actors/actresses
+actor_pairs_df = df.withColumn("cast", explode(col("cast"))) \
+                   .select("id", "title", "cast.name").alias("actor1") \
+                   .join(
+                       df.withColumn("cast", explode(col("cast")))
+                       .select("id", "cast.name").alias("actor2"),
+                       col("actor1.id") == col("actor2.id")
+) \
+    .filter(col("actor1.name") < col("actor2.name")) \
+    .select("id", "title", col("actor1.name").alias("actor1"), col("actor2.name").alias("actor2"))
 
 # Group by actor pairs and count the number of movies they co-cast in
 co_cast_df = actor_pairs_df.groupBy("actor1", "actor2").agg(
-    collect_list("movie_id").alias("movie_ids")
+    collect_list("id").alias("movie_ids")
 ).filter(size("movie_ids") >= 2)
 
 # Explode the list of movie IDs and select required columns
