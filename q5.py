@@ -9,7 +9,12 @@ hdfs_nn = sys.argv[1]
 spark = SparkSession.builder.appName("Assignment 2 Question 5").getOrCreate()
 
 # Read movie data from Parquet file
-df = spark.read.parquet(hdfs_nn + "./data/tmdb_5000_credits.parquet")
+input_path = "hdfs://{}:9000/assignment2/part2/input/tmdb_5000_credits.parquet".format(
+    hdfs_nn)
+output_path = "hdfs://{}:9000/assignment2/part2/input/tmdb_5000_credits.parquet".format(
+    hdfs_nn)
+
+df = spark.read.option("header", "true").parquet(input_path)
 
 # Extract pairs of actors/actresses for each movie
 actor_pairs_df = df.select("movie_id", "title", "cast").explode("cast").alias("actor").join(
@@ -36,4 +41,4 @@ result_df = co_cast_df.select(
 )
 
 # Save the result into Parquet files with the specified schema
-result_df.write.mode("overwrite").parquet(hdfs_nn + "/path/to/output")
+result_df.write.csv(output_path)
