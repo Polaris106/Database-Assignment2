@@ -1,50 +1,39 @@
 import sys
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import explode, col, split, lead, expr
-from pyspark.sql.window import Window
-# you may add more import if you need to
+from pyspark.sql.functions import col, collect_list, size
+from itertools import combinations
 
-# don't change this line
-# hdfs_nn = sys.argv[1]
+# Don't change this line
+hdfs_nn = sys.argv[1]
 
-spark = SparkSession.builder.appName("Assigment 2 Question 5").getOrCreate()
-# YOUR CODE GOES BELOW
-output_path = '/data/output6'
-input_fpath = '/data/tmdb_5000_credits.parquet'
+spark = SparkSession.builder.appName("Assignment 2 Question 5").getOrCreate()
 
-df = spark.read.parquet(input_fpath, header=True)
-df_cast = df.select("movie_id", "title", explode(expr(
-    "from_json(cast, 'array<struct<cast_id:long,character:string,credit_id:string,gender:long,id:long,name:string,order:long>>')")).alias("cast_info"))
-# df_cast.show()
-df_cast = df_cast.select("movie_id", "title", col(
-    "cast_info.name").alias("actor1"))
+# Read movie data from Parquet file
+df = spark.read.parquet(hdfs_nn + "./data/tmdb_5000_credits.parquet")
 
-
-# Join the dataframe with itself to find actor pairs co-cast in the same movie
-actor_pair = df_cast.alias("a1").join(
-    df_cast.alias("a2"),
-    (col("a1.movie_id") == col("a2.movie_id")) & (
-        col("a1.actor1") != col("a2.actor1"))
+# Extract pairs of actors/actresses for each movie
+actor_pairs_df = df.select("movie_id", "title", "cast").explode("cast").alias("actor").join(
+    df.select("movie_id", "cast").explode("cast").alias("other_actor"),
+    col("actor.cast") < col("other_actor.cast")
 ).select(
-    col("a1.movie_id"),
-    col("a1.title"),
-    col("a1.actor1").alias("actor1"),
-    col("a2.actor1").alias("actor2")
+    "movie_id",
+    "title",
+    col("actor.cast").alias("actor1"),
+    col("other_actor.cast").alias("actor2")
 )
 
+# Group by actor pairs and count the number of movies they co-cast in
+co_cast_df = actor_pairs_df.groupBy("actor1", "actor2").agg(
+    collect_list("movie_id").alias("movie_ids")
+).filter(size("movie_ids") >= 2)
 
-# Group by actor pairs and count the number of movies they have worked together
-actor_pair_count = actor_pair.groupBy("actor1", "actor2").count()
+# Explode the list of movie IDs and select required columns
+result_df = co_cast_df.select(
+    col("movie_ids").getItem(0).alias("movie_id"),
+    "title",
+    "actor1",
+    "actor2"
+)
 
-# Filter to include only actor pairs who have worked in at least 2 movies together
-actor_pair_filtered = actor_pair_count.filter(col("count") >= 2)
-
-# Join with original actor_pair dataframe to get movie_id and title
-final_result = actor_pair_filtered.join(actor_pair, [
-                                        "actor1", "actor2"], "inner").select("movie_id", "title", "actor1", "actor2")
-
-# Show the resulting actor pairs
-final_result.show()
-
-# Write result to Parquet files
-final_result.write.parquet(output_path, mode="overwrite")
+# Save the result into Parquet files with the specified schema
+result_df.write.mode("overwrite").parquet(hdfs_nn + "/path/to/output")
