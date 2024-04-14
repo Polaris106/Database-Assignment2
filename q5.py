@@ -9,7 +9,7 @@ hdfs_nn = sys.argv[1]
 spark = SparkSession.builder.appName("Assignment 2 Question 5").getOrCreate()
 
 # Read movie data from Parquet file
-movies_df = spark.read.parquet(hdfs_nn + "/path/to/movies")
+movies_df = spark.read.parquet(hdfs_nn + '/content/tmdb_5000_credits.parquet')
 
 # Extract pairs of actors/actresses for each movie
 actor_pairs_df = movies_df.select("movie_id", "title", "cast").explode("cast").alias("actor").join(
