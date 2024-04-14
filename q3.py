@@ -15,15 +15,15 @@ df = spark.read.option("header", True)\
     .option("quotes", '"')\
     .csv("hdfs://%s:9000/assignment2/part1/input/" % hdfs_nn)
 
-# Calculate the average rating per restaurant and city
-avg_rating_df = df.groupBy("City", "Name").agg(
+# Calculate the average rating per city
+avg_rating_df = df.groupBy("City").agg(
     avg("Rating").alias("AverageRating"))
 
-# Determine the three cities with the highest average rating per restaurant
+# Determine the three cities with the highest average rating
 top_cities_df = avg_rating_df.orderBy(col("AverageRating").desc()).limit(
     3).withColumn("RatingGroup", "Top")
 
-# Determine the three cities with the lowest average rating per restaurant
+# Determine the three cities with the lowest average rating
 bottom_cities_df = avg_rating_df.orderBy(
     col("AverageRating")).limit(3).withColumn("RatingGroup", "Bottom")
 
