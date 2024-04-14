@@ -1,6 +1,6 @@
 import sys
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import avg, col
+from pyspark.sql.functions import avg, col, lit
 
 # Don't change this line
 hdfs_nn = sys.argv[1]
