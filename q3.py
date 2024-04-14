@@ -21,11 +21,11 @@ avg_rating_df = df.groupBy("City").agg(
 
 # Determine the three cities with the highest average rating
 top_cities_df = avg_rating_df.orderBy(col("AverageRating").desc()).limit(
-    3).withColumn("RatingGroup", "Top")
+    3).withColumn("RatingGroup", lit("Top"))
 
 # Determine the three cities with the lowest average rating
 bottom_cities_df = avg_rating_df.orderBy(
-    col("AverageRating")).limit(3).withColumn("RatingGroup", "Bottom")
+    col("AverageRating")).limit(3).withColumn("RatingGroup", lit("Bottom"))
 
 # Combine the top and bottom cities dataframes
 combined_df = top_cities_df.union(bottom_cities_df)
