@@ -30,8 +30,12 @@ bottom_cities_df = avg_rating_df.orderBy(
 # Combine the top and bottom cities dataframes
 combined_df = top_cities_df.union(bottom_cities_df)
 
+# Sort the combined DataFrame
+sorted_df = combined_df.orderBy(
+    col("RatingGroup").desc(), col("AverageRating").desc())
+
 # Selecting only necessary columns
-result_df = combined_df.select("City", "AverageRating", "RatingGroup")
+result_df = sorted_df.select("City", "AverageRating", "RatingGroup")
 
 # Write the output as CSV files into the specified HDFS path
 result_df.write.csv(
