@@ -1,7 +1,6 @@
 import sys
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import col, collect_list, size, explode, split
-from itertools import combinations
+from pyspark.sql.functions import col, collect_list, size, explode, split, from_json
 
 # Don't change this line
 hdfs_nn = sys.argv[1]
@@ -18,6 +17,7 @@ df = spark.read.parquet(input_path)
 
 # Define JSON schema for the cast field
 json_schema = "array<struct<cast_id:int, character:string, credit_id:string, gender:int, id:int, name:string, order:int>>"
+df = df.withColumn("cast", explode(from_json(df["cast"], json_schema)))
 
 # Explode the cast array to get individual actors/actresses
 actor_pairs_df = df.withColumn("cast", explode(col("cast"))) \
