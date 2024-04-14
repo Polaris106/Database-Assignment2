@@ -23,7 +23,7 @@ actor_pairs_df = df.select("movie_id", "title", explode(split("cast", ",")).alia
     (col("actor.movie_id") == col("other_actor.movie_id")) & (
         col("actor.actor") < col("other_actor.actor"))
 ).select(
-    "movie_id",
+    col("actor.movie_id").alias("movie_id"),
     "title",
     col("actor.actor").alias("actor1"),
     col("other_actor.actor").alias("actor2")
