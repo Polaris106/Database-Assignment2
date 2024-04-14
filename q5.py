@@ -1,6 +1,6 @@
 import sys
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import col, collect_list, size, explode, split
+from pyspark.sql.functions import col, collect_list, size, explode, split, from_json
 from itertools import combinations
 
 # Don't change this line
@@ -42,4 +42,4 @@ result_df = co_cast_df.select(
 )
 
 # Save the result into Parquet files with the specified schema
-result_df.write.csv(output_path)
+result_df.write.parquet(output_path)
