@@ -37,7 +37,6 @@ co_cast_df = actor_pairs_df.groupBy("actor1", "actor2").agg(
 # Explode the list of movie IDs and select required columns
 result_df = co_cast_df.select(
     col("movie_ids").getItem(0).alias("movie_id"),
-    "title",
     "actor1",
     "actor2"
 )
