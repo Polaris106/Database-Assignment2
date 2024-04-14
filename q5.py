@@ -9,8 +9,8 @@ from pyspark.sql.window import Window
 
 spark = SparkSession.builder.appName("Assigment 2 Question 5").getOrCreate()
 # YOUR CODE GOES BELOW
-output_path = '/content/output6'
-input_fpath = '/content/tmdb_5000_credits.parquet'
+output_path = '/data/output6'
+input_fpath = '/data/tmdb_5000_credits.parquet'
 
 df = spark.read.parquet(input_fpath, header=True)
 df_cast = df.select("movie_id", "title", explode(expr(
