@@ -1,47 +1,55 @@
+from itertools import combinations
+import pyspark.sql.types as T
+import pyspark.sql.functions as F
 import sys
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import col, collect_list, size, explode, split, from_json
+# you may add more import if you need to
 
-# Don't change this line
+# don't change this line
 hdfs_nn = sys.argv[1]
 
-spark = SparkSession.builder.appName("Assignment 2 Question 5").getOrCreate()
+spark = SparkSession.builder.appName("Assigment 2 Question 5").getOrCreate()
+# YOUR CODE GOES BELOW
 
-# Read movie data from Parquet file
-input_path = "hdfs://{}:9000/assignment2/part2/input/tmdb_5000_credits.parquet".format(
-    hdfs_nn)
-output_path = "hdfs://{}:9000/assignment2/output/question5".format(
-    hdfs_nn)
+# Q5
 
-df = spark.read.parquet(input_path)
+data = spark.read.parquet(
+    f"hdfs://{hdfs_nn}:9000/assignment2/part2/input/tmdb_5000_credits.parquet", header=True)
 
-# Define JSON schema for the cast field
-json_schema = "array<struct<cast_id:int, character:string, credit_id:string, gender:int, id:int, name:string, order:int>>"
-df = df.withColumn("cast", explode(from_json(df["cast"], json_schema)))
+# define schema for the "cast" column and new column "parsed_json" containing the parsed JSON data.
+schema = T.ArrayType(T.StructType(
+    [T.StructField("name", T.StringType(), False)]))
+movies2 = data.withColumn("parsejson", F.from_json("cast", schema))
 
-# Explode the cast array to get individual actors/actresses
-actor_pairs_df = df.select("movie_id", "title", "cast.name").alias("actor1") \
-                   .join(
-                       df.select("movie_id", "cast.name").alias("actor2"),
-                       col("actor1.movie_id") == col("actor2.movie_id")
-) \
-    .filter(col("actor1.name") < col("actor2.name")) \
-    .select(col("actor1.movie_id"), "title", col("actor1.name").alias("actor1"), col("actor2.name").alias("actor2"))
+# sort
 
-# Group by actor pairs and count the number of movies they co-cast in
-co_cast_df = actor_pairs_df.groupBy("actor1", "actor2").agg(
-    collect_list("movie_id").alias("movie_ids")
-).filter(size("movie_ids") >= 2)
 
-# Explode the list of movie IDs and select required columns
-result_df = co_cast_df.select(
-    col("movie_ids").getItem(0).alias("movie_id"),
-    "title",
-    "actor1",
-    "actor2"
-)
+def pair(x): return combinations(sorted(x), 2)
 
-# Save the result into Parquet files with the specified schema
-result_df.write.mode("overwrite").parquet(output_path)
 
-spark.stop()
+# schema of the "parsed_json" column from the DataFrame movies2
+schema2 = movies2.select("parsejson").schema[0].dataType
+
+get_combinations = F.udf(pair, T.ArrayType(schema2))
+
+
+# new column named "pairs" by exploding combinations
+movies3 = movies2.withColumn("actorpairs", F.explode(
+    get_combinations(movies2["parsejson"])))
+
+grouppairs = movies3.groupBy("actorpairs")
+
+countpairs = grouppairs.count()
+filtered = countpairs.filter(F.col("count") > 1)
+joined = filtered.join(movies3, ["actorpairs"], "left")
+
+# drop unnecessary columns
+out = joined.drop("count", "cast", "crew", "parsejson")
+
+# new columns "actor1" and "actor2" by from the pairs, drops the pairs
+finalout = out.withColumn("actor1", F.col("actorpairs")[0]["name"])\
+    .withColumn("actor2", F.col("actorpairs")[1]["name"])\
+    .drop("actorpairs")
+
+finalout.write.csv(
+    f"hdfs://{hdfs_nn}:9000/assignment2/part2/output/question5", header=True)
