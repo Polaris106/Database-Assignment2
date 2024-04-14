@@ -26,7 +26,7 @@ actor_pairs_df = df.select("movie_id", "title", "cast.name").alias("actor1") \
                        col("actor1.movie_id") == col("actor2.movie_id")
 ) \
     .filter(col("actor1.name") < col("actor2.name")) \
-    .select("movie_id", "title", col("actor1.name").alias("actor1"), col("actor2.name").alias("actor2"))
+    .select(col("actor1.movie_id"), "title", col("actor1.name").alias("actor1"), col("actor2.name").alias("actor2"))
 
 # Group by actor pairs and count the number of movies they co-cast in
 co_cast_df = actor_pairs_df.groupBy("actor1", "actor2").agg(
