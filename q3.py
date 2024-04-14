@@ -1,13 +1,12 @@
 import sys
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import avg, desc, asc, rank
-from pyspark.sql.window import Window
+from pyspark.sql.functions import avg, col
 
 # Don't change this line
 hdfs_nn = sys.argv[1]
 
 # Initialize SparkSession
-spark = SparkSession.builder.appName("Assigment 2 Question 3").getOrCreate()
+spark = SparkSession.builder.appName("Assignment 2 Question 3").getOrCreate()
 
 # Load data from HDFS
 df = spark.read.option("header", True)\
@@ -16,34 +15,23 @@ df = spark.read.option("header", True)\
     .option("quotes", '"')\
     .csv("hdfs://%s:9000/assignment2/part1/input/" % hdfs_nn)
 
-# Group by city and restaurant, calculate average rating
+# Calculate the average rating per restaurant and city
 avg_rating_df = df.groupBy("City", "Name").agg(
     avg("Rating").alias("AverageRating"))
 
-# Create window specifications for ranking
-window_desc = Window.partitionBy("City").orderBy(desc("AverageRating"))
-window_asc = Window.partitionBy("City").orderBy(asc("AverageRating"))
+# Determine the three cities with the highest average rating per restaurant
+top_cities_df = avg_rating_df.orderBy(col("AverageRating").desc()).limit(
+    3).withColumn("RatingGroup", "Top")
 
-# Rank cities based on average rating
-avg_rating_df = avg_rating_df.withColumn("RankDesc", rank().over(window_desc)) \
-    .withColumn("RankAsc", rank().over(window_asc))
+# Determine the three cities with the lowest average rating per restaurant
+bottom_cities_df = avg_rating_df.orderBy(
+    col("AverageRating")).limit(3).withColumn("RatingGroup", "Bottom")
 
-# Filter top 3 and bottom 3 cities
-top_3_cities = avg_rating_df.filter(
-    "RankDesc <= 3").select("City", "AverageRating")
-bottom_3_cities = avg_rating_df.filter(
-    "RankAsc <= 3").select("City", "AverageRating")
+# Combine the top and bottom cities dataframes
+combined_df = top_cities_df.union(bottom_cities_df)
 
-# Add RatingGroup column
-top_3_cities = top_3_cities.withColumn("RatingGroup", "High")
-bottom_3_cities = bottom_3_cities.withColumn("RatingGroup", "Low")
-
-# Combine top and bottom cities
-result_df = top_3_cities.union(bottom_3_cities)
-
-# Write the output as CSV files into the specified HDFS path
-result_df.write.csv(
-    "hdfs://%s:9000/assignment2/output/question3/" % hdfs_nn, header=True)
+# Selecting only necessary columns
+result_df = combined_df.select("City", "AverageRating", "RatingGroup")
 
 # Write the output as CSV files into the specified HDFS path
 result_df.write.csv(
