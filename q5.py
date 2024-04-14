@@ -52,4 +52,4 @@ finalout = out.withColumn("actor1", F.col("actorpairs")[0]["name"])\
     .drop("actorpairs")
 
 finalout.write.csv(
-    f"hdfs://{hdfs_nn}:9000/assignment2/part2/output/question5", header=True)
+    f"hdfs://{hdfs_nn}:9000/assignment2/output/question5", header=True)
